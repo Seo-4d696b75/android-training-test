@@ -1,0 +1,35 @@
+name: test-action
+on: pull_request
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: write
+    timeout-minutes: 10
+    env:
+      src_repo: yumemi-inc/android-training-template
+      dst_repo: ${{ github.repository }}
+      access_token: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+        with:
+          token: ${{ env.access_token }}
+      - name: Git config
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+      - name: Setup branches
+        run: |
+          # templateリポジトリの main,template/* ブランチの履歴をそのまま持ってくる
+          # 後続の選択必須課題で template/* ブランチを main にマージするとき不要なコンフリクトを避ける
+          git remote add template-repo https://github.com/${{ env.src_repo }}.git
+          git fetch --all
+          src=($(git branch -r | grep template-repo/template/ | sed "s/template-repo\///"))
+          for branch in "${src[@]}"; do
+              git checkout "template-repo/${branch}"
+              git checkout -b "test/${branch}"
+              git push origin "test/${branch}"
+          done
+          git remote rm template-repo
